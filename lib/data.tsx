@@ -2,9 +2,9 @@ import { Task, Agent, KPI } from "./types";
 
 
 export const agent_list: Agent[] = [
-  { id: 'A1', name: 'Creative Agent', avatar: '🎨' },
-  { id: 'A2', name: 'Media Agent', avatar: '📡' },
-  { id: 'A3', name: 'Validation Agent', avatar: '🔍' },
+  { id: 'A1', name: 'Creative Agent', avatar: '🎨' , description: 'Transforms insights into compelling designs, concepts, and storytelling assets powered by Claude-level creativity.'},
+  { id: 'A2', name: 'Media Agent', avatar: '📡' , description: 'Strategizes and deploys high-impact media and channel activations using Claude-optimized planning intelligence.'},
+  { id: 'A3', name: 'Validation Agent', avatar: '🔍', description:'Examines ideas with rigorous analysis and structured evidence to ensure accuracy, feasibility, and effectiveness.'},
 ]
 
 

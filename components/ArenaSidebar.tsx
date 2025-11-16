@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Paperclip, Send, Check, Plus } from 'lucide-react';
-import type { Task, DiscussionMessage, Agent, KPI } from '@/lib/types';
+import type { Task, DiscussionMessage, Agent, KPI, DiscussionFile } from '@/lib/types';
 import { agent_list } from '@/lib/data';
 
 type ArenaSidebarProps = {
@@ -63,27 +63,43 @@ export default function ArenaSidebar({ task, onKPIUpdate }: ArenaSidebarProps) {
       minute: '2-digit',
     });
 
-    if (task.discussion_messages && task.discussion_messages.length > 0) {
-      setMessages(
-        task.discussion_messages.map((m) => ({
-          ...m,
-          from: m.from as 'agent' | 'you',
-        }))
-      );
-    } else {
-      const helenText = blockedByRequirements
-        ? `You’re in the Workplace for “${task.name}”. You need to complete the Requirements first before this Arena unlocks.`
-        : `You’re now in the Workplace for “${task.name}”. I can help you refine KPIs, next actions, or risk notes.`;
+if (task && task.discussion_messages?.length) {
+  setMessages(
+    task.discussion_messages.map((m): Message => ({
+      ...m,
+      // derive "from" from senderType
+      from: m.senderType === 'agent' ? 'agent' : 'you',
+      // optional: if you later support file attachments
+      // attachments: m.content
+      //   .filter((block) => block.type === 'file')
+      //   .map((block) => (block as { type: 'file'; file: DiscussionFile }).file),
+    }))
+  );
+} else {
+  const nowIso = new Date().toISOString();
 
-      setMessages([
-        {
-          id: 1,
-          from: 'agent',
-          text: helenText,
-          time: now,
-        } as Message,
-      ]);
-    }
+  const helenText = blockedByRequirements
+    ? `You’re in the Workplace for “${task.name}”. You need to complete the Requirements first before this Arena unlocks.`
+    : `You’re now in the Workplace for “${task.name}”. I can help you refine KPIs, next actions, or risk notes.`;
+
+  const welcomeMessage: Message = {
+    id: 'local-welcome',           // must be string
+    createdAt: nowIso,
+    senderType: 'agent',           // assuming 'agent' is valid in SenderType
+    senderLabel: 'Helen',
+    senderId: 'helen-system',      // optional
+    content: [
+      {
+        type: 'text',
+        text: helenText,
+      },
+    ],
+    from: 'agent',
+    metadata: {},                  // optional
+  };
+
+  setMessages([welcomeMessage]);
+}
 
     setAttachedFiles([]);
     setMembers(task.group_members ?? []);
@@ -96,24 +112,50 @@ export default function ArenaSidebar({ task, onKPIUpdate }: ArenaSidebarProps) {
     }, [messages]);
 
   const addMessage = (
-    from: Message['from'],
-    text: string,
-    attachments?: FileAttachment[]
-  ) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-        from,
-        text,
-        time: new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        attachments,
-      },
-    ]);
-  };
+  from: 'agent' | 'you',
+  text: string,
+  attachments: DiscussionFile[] = []
+) => {
+  const now = new Date();
+
+  setMessages((prev) => {
+    const newMessage: Message = {
+      // make a string id instead of numeric increment
+      id: `${now.getTime()}-${prev.length + 1}`,
+      createdAt: now.toISOString(),
+
+      // map "from" to senderType
+      senderType: from === 'agent' ? 'agent' : 'user', // adjust to your actual SenderType union
+      senderId: from === 'agent' ? 'helen-system' : undefined,
+      senderLabel: from === 'agent' ? 'Helen' : 'You',
+
+      // new content structure
+      content: [
+        ...(text
+          ? [
+              {
+                type: 'text' as const,
+                text,
+              },
+            ]
+          : []),
+        ...attachments.map((file) => ({
+          type: 'file' as const,
+          file,
+        })),
+      ],
+
+      // extra UI-only fields
+      from,
+      attachments,
+      metadata: {},
+      taskId: undefined,
+      replyToMessageId: undefined,
+    };
+
+    return [...prev, newMessage];
+  });
+};
 
   const handleSend = () => {
     if (!task) return;
@@ -131,7 +173,7 @@ export default function ArenaSidebar({ task, onKPIUpdate }: ArenaSidebarProps) {
     }));
 
     // 1️⃣ Log user's message
-    addMessage('you', hasText ? trimmed : '', hasFiles ? attachments : undefined);
+    addMessage('you', hasText ? trimmed : '');
     setInput('');
     setAttachedFiles([]);
 
@@ -263,7 +305,7 @@ export default function ArenaSidebar({ task, onKPIUpdate }: ArenaSidebarProps) {
       key={agent.id}
       className="w-6 h-6 bg-blue-100 text-blue-800 text-[10px] rounded-full flex items-center justify-center border-2 border-white"
     >
-      {agent.icon ?? agent.name.slice(0, 2)}
+      {agent.avatar ?? agent.name.slice(0, 2)}
     </span>
   ))}
 
@@ -302,18 +344,13 @@ export default function ArenaSidebar({ task, onKPIUpdate }: ArenaSidebarProps) {
           >
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm">
-                {agent.icon ?? agent.name.slice(0, 2)}
+                {agent.avatar ?? agent.name.slice(0, 2)}
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-semibold text-gray-800">
                     {agent.name}
                   </span>
-                  {agent.tier === 'pro' && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-900 text-white">
-                      PRO
-                    </span>
-                  )}
                 </div>
                 <span className="text-[11px] text-gray-500 line-clamp-2">
                   {agent.description}
@@ -374,34 +411,27 @@ export default function ArenaSidebar({ task, onKPIUpdate }: ArenaSidebarProps) {
                 )}
 
                 <div className="max-w-[80%]">
-                  <div className="text-[11px] text-gray-500 mb-0.5">
+                <div className="text-[11px] text-gray-500 mb-0.5">
                     <span className="font-semibold">
-                      {msg.from === 'agent' ? 'Creative Agent' : 'You'}
+                    {msg.from === 'agent' ? 'Creative Agent' : 'You'}
                     </span>{' '}
-                    <span className="ml-1">{msg.time}</span>
-                  </div>
+                    <span className="ml-1">{msg.createdAt}</span>
+                </div>
 
-                  {msg.text && msg.text.trim().length > 0 && (
+                {/* text content from MessageContentBlock[] */}
+                {(() => {
+                    const textBlock = msg.content?.find(
+                    (b): b is { type: 'text'; text: string } => b.type === 'text'
+                    );
+
+                    if (!textBlock || !textBlock.text.trim().length) return null;
+
+                    return (
                     <div className="text-sm text-gray-800 whitespace-pre-line">
-                      {msg.text}
+                        {textBlock.text}
                     </div>
-                  )}
-
-                  {msg.attachments && msg.attachments.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {msg.attachments.map((att) => (
-                        <div
-                          key={att.id}
-                          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-xs"
-                        >
-                          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#4d4ea1]/10 text-[#4d4ea1]">
-                            <Paperclip className="w-3 h-3" />
-                          </div>
-                          <span className="truncate">{att.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    );
+                })()}
                 </div>
 
                 {msg.from === 'you' && (

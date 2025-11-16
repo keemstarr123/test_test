@@ -1,7 +1,6 @@
 // lib/types.ts
 
 // Who is talking?
-type SenderType = 'user' | 'ai_agent' | 'system';
 
 export interface DiscussionFile {
   id: string;          // DB id or storage key
@@ -24,7 +23,7 @@ export type MessageContentBlock =
 export interface DiscussionMessage {
   id: string;
   createdAt: string; // ISO timestamp
-  senderType: SenderType;
+  senderType: string;
   senderId?: string;          // userId OR agentId (depending on senderType)
   senderLabel?: string;       // e.g. "Helen", "Optimization Agent"
 
@@ -51,6 +50,7 @@ export interface Agent {
   id: string;
   name: string;
   avatar: string; // Using avatar for a potential UI
+  description: string;
 }
 
 // Your Task type

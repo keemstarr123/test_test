@@ -13,6 +13,7 @@ import ReactFlow, {
   OnEdgesChange,
   NodeTypes,
   useReactFlow,
+  MarkerType
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -47,7 +48,7 @@ function buildEdges(tasks: Task[]): Edge[] {
         target: successorId,
         type: 'default',
         markerEnd: {
-          type: 'arrowclosed',
+          type: MarkerType.ArrowClosed,
           width: 20,
           height: 20,
           color: '#6366f1',
