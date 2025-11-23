@@ -10,6 +10,7 @@ export interface DiscussionFile {
   sizeBytes?: number;
 }
 
+
 export type MessageContentBlock =
   | {
       type: 'text';
@@ -56,6 +57,7 @@ export interface Agent {
 // Your Task type
 export interface Task {
   id: string;
+  position: { x: number; y: number }; // For canvas positioning
   name: string;     // This will be the title
   desc: string;
   icon: string;     // This is the emoji
@@ -66,5 +68,12 @@ export interface Task {
   predecessor: string[];
   successor: string[]; // We use this to draw the arrows
   discussion_messages: DiscussionMessage[];
+}
+
+export interface Project {
+  title: string;
+  description: string;
+  tasks: Task[];
+  progress: number;
 }
 

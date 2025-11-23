@@ -21,15 +21,7 @@ import TaskNode from './TaskNode';
 import type { Task } from '@/lib/types';
 
 // positions
-const nodePositions: { [key: string]: { x: number; y: number } } = {
-  T1: { x: 450, y: 50 },
-  T6: { x: 1050, y: 50 },
-  T2: { x: 150, y: 300 },
-  T3: { x: 450, y: 300 },
-  T4: { x: 750, y: 300 },
-  T5: { x: 750, y: 500 },
-  T7: { x: 450, y: 700 },
-};
+
 
 type Tool = 'select' | 'add' | 'delete';
 
@@ -73,7 +65,7 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
     tasks.map(task => ({
       id: task.id,
       type: 'task',
-      position: nodePositions[task.id] || { x: 0, y: 0 },
+      position: task.position || { x: 0, y: 0 },
       data: task,
     }))
   );
@@ -89,7 +81,7 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
         type: 'task',
         position:
           existing?.position ||
-          nodePositions[task.id] || { x: 0, y: 0 },
+          task.position || { x: 0, y: 0 },
         data: task, // 👈 always use latest task (with updated KPI)
       };
     })
@@ -140,6 +132,7 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
             data: {
               id: newId,
               name: 'New Task',
+              position: {x: 0, y: 0},
               desc: 'Describe what happens in this step.',
               icon: '✨',
               completed: false,

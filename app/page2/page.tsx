@@ -9,12 +9,12 @@ import ArenaSidebar from '@/components/ArenaSidebar';
 import KPISidebar from '@/components/KPISidebar';
 
 import type { Task, KPI } from '@/lib/types';
-import { mockTasks } from '@/lib/data';
+import { mockTasks2 } from '@/lib/data';
 
 export default function Home() {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [tasks, setTasks] = useState<Task[]>(mockTasks2);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
-    mockTasks[0]?.id ?? null
+    mockTasks2[0]?.id ?? null
   );
 
   const selectedTask = tasks.find(t => t.id === selectedTaskId) ?? null;
