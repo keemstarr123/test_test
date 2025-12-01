@@ -38,22 +38,47 @@ export default function Home() {
     );
   };
 
+  // 🔁 when Next is clicked:
+  // - go to first successor
+  // - clear that successor's Requirements
+  const handleNextTask = (nextId: string | null) => {
+    if (!nextId) return;
+
+    setTasks(prev =>
+      prev.map(task =>
+        task.id === nextId
+          ? {
+              ...task,
+              // assumes field name is `Requirements`
+              // and you want it completely cleared
+              Requirements: [],
+            }
+          : task
+      )
+    );
+
+    setSelectedTaskId(nextId);
+  };
+
   return (
     <main className="relative w-[100vw] h-[100vh] overflow-hidden bg-[#f4f6fa]">
       <div className="absolute w-[100%] h-[100%]  z-50  flex flex-col">
         <header className="bg-white text-black flex justify-between items-center px-5 py-3 rounded-full shadow-sm">
           <h1 className="text-lg font-bold">
-            Guided Personalization to Convert Browsers into Buyers
+            AI Implementation Canvas for Lucky Draw & WhatsApp Journeys
           </h1>
 
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-              Current status: <span className="font-semibold">No step selected</span>
+              Current status:{' '}
+              <span className="font-semibold">
+                {selectedTask ? selectedTask.name : 'No step selected'}
+              </span>
             </span>
 
             <button
               className="text-sm font-medium px-4 py-1 rounded-full border"
-              style={{ borderColor: "#4D4EA1", color: "#4D4EA1" }}
+              style={{ borderColor: '#4D4EA1', color: '#4D4EA1' }}
             >
               Share
             </button>
@@ -79,7 +104,9 @@ export default function Home() {
               kpis={selectedTask?.kpi ?? []}
               requirements={selectedTask?.Requirements ?? []}
               taskId={selectedTask?.id ?? null}
+              successors={selectedTask?.successor ?? []}
               onKPIUpdate={handleKPIUpdate}
+              onNextTask={handleNextTask}
             />
             <ArenaSidebar
               task={selectedTask}
@@ -91,3 +118,5 @@ export default function Home() {
     </main>
   );
 }
+
+

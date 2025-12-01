@@ -20,9 +20,6 @@ import 'reactflow/dist/style.css';
 import TaskNode from './TaskNode';
 import type { Task } from '@/lib/types';
 
-// positions
-
-
 type Tool = 'select' | 'add' | 'delete';
 
 interface ProjectCanvasProps {
@@ -57,8 +54,12 @@ function buildEdges(tasks: Task[]): Edge[] {
 }
 
 export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProps) {
-  const { project } = useReactFlow();
+  const { project,fitView } = useReactFlow();
   const [activeTool, setActiveTool] = useState<Tool>('select');
+
+  // 🌟 animation state
+  const [isIntroLoading, setIsIntroLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(0);
 
   // 🔹 nodes initialised from tasks
   const [nodes, setNodes] = useState<Node<Task>[]>(() =>
@@ -72,27 +73,107 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
 
   // 🔹 keep node.data in sync when tasks change
   useEffect(() => {
-  setNodes(prevNodes =>
-    tasks.map(task => {
-      // keep existing position if node already exists
-      const existing = prevNodes.find(n => n.id === task.id);
-      return {
-        id: task.id,
-        type: 'task',
-        position:
-          existing?.position ||
-          task.position || { x: 0, y: 0 },
-        data: task, // 👈 always use latest task (with updated KPI)
-      };
-    })
-  );
-}, [tasks]);
+    setNodes(prevNodes =>
+      tasks.map(task => {
+        const existing = prevNodes.find(n => n.id === task.id);
+        return {
+          id: task.id,
+          type: 'task',
+          position: existing?.position || task.position || { x: 0, y: 0 },
+          data: task,
+        };
+      })
+    );
+  }, [tasks]);
 
   const [edges, setEdges] = useState<Edge[]>(() => buildEdges(tasks));
 
   useEffect(() => {
     setEdges(buildEdges(tasks));
   }, [tasks]);
+
+  // 🎬 intro + stagger animation
+  useEffect(() => {
+    if (!tasks.length || !nodes.length) return;
+
+    setVisibleCount(0);
+    setIsIntroLoading(true);
+
+    let intervalId: number | undefined;
+    const introTimeout = window.setTimeout(() => {
+      // hide spinner, start revealing nodes
+      setIsIntroLoading(false);
+      setVisibleCount(1); // show first node
+
+      intervalId = window.setInterval(() => {
+        setVisibleCount(prev => {
+          if (prev >= nodes.length) {
+            if (intervalId !== undefined) {
+              window.clearInterval(intervalId);
+            }
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1000); // delay between nodes
+    }, 1500); // spinner duration
+
+    return () => {
+      window.clearTimeout(introTimeout);
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks.length, nodes.length]);
+
+  useEffect(() => {
+    if (isIntroLoading) return;
+    if (!nodes.length) return;
+
+    requestAnimationFrame(() => {
+      fitView({ padding: 0.25, duration: 600 });
+    });
+  }, [nodes, isIntroLoading, fitView]);
+
+  // map node.id → index so we know when to show edges
+  const nodeIndexById = useMemo(() => {
+    const map: Record<string, number> = {};
+    nodes.forEach((n, idx) => {
+      map[n.id] = idx;
+    });
+    return map;
+  }, [nodes]);
+
+  // only show first `visibleCount` nodes
+  const animatedNodes = useMemo(
+    () =>
+      nodes.map((n, idx) => ({
+        ...n,
+        hidden: idx >= visibleCount,
+      })),
+    [nodes, visibleCount]
+  );
+
+  // only show edges when both ends are visible
+  const animatedEdges = useMemo(
+    () =>
+      edges.map(edge => {
+        const sIdx = nodeIndexById[edge.source];
+        const tIdx = nodeIndexById[edge.target];
+        const visible =
+          sIdx !== undefined &&
+          tIdx !== undefined &&
+          sIdx < visibleCount &&
+          tIdx < visibleCount;
+
+        return {
+          ...edge,
+          hidden: !visible,
+        };
+      }),
+    [edges, nodeIndexById, visibleCount]
+  );
 
   const nodeTypes: NodeTypes = useMemo(
     () => ({
@@ -122,7 +203,6 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
 
         const newId = `T-new-${Date.now()}`;
 
-        // you'll probably want to also add this to `tasks` state in parent later
         setNodes(nds => [
           ...nds,
           {
@@ -132,7 +212,7 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
             data: {
               id: newId,
               name: 'New Task',
-              position: {x: 0, y: 0},
+              position: { x: 0, y: 0 },
               desc: 'Describe what happens in this step.',
               icon: '✨',
               completed: false,
@@ -145,12 +225,16 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
             },
           },
         ]);
+
+        // 👇 ensure ReactFlow has picked up the new node before we fit
+        
       } else if (activeTool === 'select') {
         onTaskSelect?.(null);
       }
     },
-    [activeTool, project, onTaskSelect]
+    [activeTool, project, onTaskSelect, fitView]
   );
+
 
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node<Task>) => {
@@ -175,20 +259,28 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
   return (
     <div className="relative w-full h-full">
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={animatedNodes}
+        edges={animatedEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onPaneClick={handlePaneClick}
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
         className="bg-gray-100"
       >
         <Controls />
         <Background color="#e5e7eb" gap={16} />
       </ReactFlow>
+
+      {/* Intro overlay spinner */}
+      {isIntroLoading && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-100/80 backdrop-blur-[1px]">
+          <div className="h-8 w-8 rounded-full border-2 border-gray-300 border-t-[#4d4ea1] animate-spin mb-3" />
+          <p className="text-sm text-gray-700">
+            Generating by our Implementation Agent…
+          </p>
+        </div>
+      )}
 
       {/* Tool bar */}
       <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2">
