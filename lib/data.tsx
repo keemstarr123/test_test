@@ -32,7 +32,7 @@ export var mockTasks: Task[] = [
     "desc": "Broadcast WhatsApp invitation messages directing users to the lucky draw entry website.",
     "icon": "📡",
     "kpi": [
-      { "id": "K3", "name": "Delivery Rate", "target": "≥ 98% broadcast delivery success", "completed": false, "evidence": "" },
+      { "id": "K3", "name": "Deliver Whatsapp Message", "target": "WhatsApp broadcast message successfully sent", "completed": false, "evidence": "" },
       { "id": "K4", "name": "Click Through Rate", "target": "≥ 40% CTR to website", "completed": false, "evidence": "" }
     ],
     "Requirements": [

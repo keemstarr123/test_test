@@ -94,6 +94,7 @@ export default function Home() {
             <ReactFlowProvider>
               <ProjectCanvas
                 tasks={tasks}
+                selectedTaskId={selectedTaskId}
                 onTaskSelect={setSelectedTaskId}
               />
             </ReactFlowProvider>

@@ -13,7 +13,7 @@ import ReactFlow, {
   OnEdgesChange,
   NodeTypes,
   useReactFlow,
-  MarkerType
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -24,6 +24,7 @@ type Tool = 'select' | 'add' | 'delete';
 
 interface ProjectCanvasProps {
   tasks: Task[];
+  selectedTaskId?: string | null;
   onTaskSelect?: (taskId: string | null) => void;
 }
 
@@ -53,8 +54,12 @@ function buildEdges(tasks: Task[]): Edge[] {
   return edges;
 }
 
-export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProps) {
-  const { project,fitView } = useReactFlow();
+export default function ProjectCanvas({
+  tasks,
+  selectedTaskId,
+  onTaskSelect,
+}: ProjectCanvasProps) {
+  const { project, fitView, setCenter } = useReactFlow();
   const [activeTool, setActiveTool] = useState<Tool>('select');
 
   // 🌟 animation state
@@ -71,7 +76,7 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
     }))
   );
 
-  // 🔹 keep node.data in sync when tasks change
+  // 🔹 keep node.data in sync when tasks change (but keep positions)
   useEffect(() => {
     setNodes(prevNodes =>
       tasks.map(task => {
@@ -101,9 +106,8 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
 
     let intervalId: number | undefined;
     const introTimeout = window.setTimeout(() => {
-      // hide spinner, start revealing nodes
       setIsIntroLoading(false);
-      setVisibleCount(1); // show first node
+      setVisibleCount(1);
 
       intervalId = window.setInterval(() => {
         setVisibleCount(prev => {
@@ -115,8 +119,8 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
           }
           return prev + 1;
         });
-      }, 1000); // delay between nodes
-    }, 1500); // spinner duration
+      }, 1000);
+    }, 1500);
 
     return () => {
       window.clearTimeout(introTimeout);
@@ -127,6 +131,7 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks.length, nodes.length]);
 
+  // 📐 auto-fit after intro / when nodes change
   useEffect(() => {
     if (isIntroLoading) return;
     if (!nodes.length) return;
@@ -135,6 +140,29 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
       fitView({ padding: 0.25, duration: 600 });
     });
   }, [nodes, isIntroLoading, fitView]);
+
+  // 🔄 sync selectedTaskId → node.selected + center view
+  useEffect(() => {
+    // update selection state
+    setNodes(prev =>
+      prev.map(n => ({
+        ...n,
+        selected: !!selectedTaskId && n.id === selectedTaskId,
+      }))
+    );
+
+    // center on selected node using task.position
+    if (!selectedTaskId) return;
+    const task = tasks.find(t => t.id === selectedTaskId);
+    if (!task?.position) return;
+
+    requestAnimationFrame(() => {
+      setCenter(task.position.x, task.position.y, {
+        zoom: 1.2,
+        duration: 400,
+      });
+    });
+  }, [selectedTaskId, tasks, setCenter]);
 
   // map node.id → index so we know when to show edges
   const nodeIndexById = useMemo(() => {
@@ -225,16 +253,12 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
             },
           },
         ]);
-
-        // 👇 ensure ReactFlow has picked up the new node before we fit
-        
       } else if (activeTool === 'select') {
         onTaskSelect?.(null);
       }
     },
-    [activeTool, project, onTaskSelect, fitView]
+    [activeTool, project, onTaskSelect]
   );
-
 
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node<Task>) => {
@@ -272,7 +296,6 @@ export default function ProjectCanvas({ tasks, onTaskSelect }: ProjectCanvasProp
         <Background color="#e5e7eb" gap={16} />
       </ReactFlow>
 
-      {/* Intro overlay spinner */}
       {isIntroLoading && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-100/80 backdrop-blur-[1px]">
           <div className="h-8 w-8 rounded-full border-2 border-gray-300 border-t-[#4d4ea1] animate-spin mb-3" />

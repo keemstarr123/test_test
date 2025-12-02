@@ -31,8 +31,8 @@ const AGENT_ENDPOINTS: Record<string, string> = {
 };
 
 const LUCKY_DRAW_WORKFLOW_STEPS = [
-  '🔍 Checking latest project files in GitHub (metadata.json, index.html, index.tsx, types.ts, services/geminiService.ts)…',
-  '🧩 Updating lucky draw components in index.tsx and types.ts…',
+  '🔍 Looking for relevant project files in GitHub (metadata.json, index.html, index.tsx, types.ts, services/geminiService.ts)…',
+  '🧩 Updating lucky draw components in constants.ts and types.ts…',
   '⚙️ Adjusting business logic in services/geminiService.ts…',
   '🚀 Deploying updated lucky draw website to hosting…',
   '✅ Done! The lucky draw website is now updated and live.',
